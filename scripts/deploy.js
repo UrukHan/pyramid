@@ -1,31 +1,32 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
-const hre = require("hardhat");
+const hre = require("hardhat")
+const ethers = hre.ethers
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
+  let USD = "0x97472Bb24756e9b53B18b0c0543033528d25A76e";     // Адрес токена валюты
+  let BTC = "0xcCFb87a75eD87adE5b70F520FD8421db6BE4E8A2";     // Адрес токена резерва
+  let multiplier = 10;                                        // Мнжитель цены резервной валюте во время ставки превышая который разрешается компенсировать ставки до финализациии
+  let waitingTime = 30;                                       // Таймер, устанавливается после финализации игры (чтобы пользователи могли забрать свою компенсацию)
+  let price = 1000;                                           // Размер одной ставки
+  let percentOwner = 500;                                     // Доля владельца (в BP, 1% = 100bp)
+  let percentMarketing = 300;                                 // Доля маркетинга (в BP, 1% = 100bp)
+  let percentLottery = 200;                                   // Доля лотореи (в BP, 1% = 100bp)
+  let percentReferral = 8000;                                 // Доля реферала (в BP, 1% = 100bp)
+  let percentageFund = 1000;                                  // Доля фонда (в BP, 1% = 100bp)// Доля фонда (в BP, 1% = 100bp)
+  let PYRAMID;
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  [owner] = await ethers.getSigners()
+  const PyramidContract = await ethers.getContractFactory("Pyramid", owner)
+  PYRAMID = await PyramidContract.deploy(USD, BTC, multiplier,  waitingTime,
+      price, percentOwner, percentMarketing, percentLottery, percentReferral, percentageFund)
+  await PYRAMID.deployed();
 
-  await lock.deployed();
-
-  console.log(
-    `Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
-  );
+  console.log("CONTRACT ADDRESS:", await PYRAMID.address);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
